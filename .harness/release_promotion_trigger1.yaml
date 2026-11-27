@@ -1,5 +1,64 @@
+
 pipeline:
+  name: Release Promotion Trigger
+  identifier: cicd_release_promotion_trigger
+
+  # Input Variables
+  variables:
+    - name: VERSION
+      type: String
+      description: Release version tag to promote (e.g., v1.1.20-rc1)
+      required: true
+    - name: ENVIRONMENT
+      type: String
+      description: Target environment for deployment (dev, qa, staging, prod)
+      required: true
+      allowedValues:
+        - dev
+        - qa
+        - staging
+        - prod
+    - name: GITOPS_REPO_URL
+      type: String
+      description: GitOps repository URL
+      default: https://github.com/your-org/gitops-repo
+    - name: TRIGGER_TYPE
+      type: String
+      description: Type of trigger mechanism (api, webhook, github_actions)
+      default: api
+      allowedValues:
+        - api
+        - webhook
+        - github_actions
+    - name: PROMOTION_WORKFLOW_ID
+      type: String
+      description: Workflow/Pipeline ID to trigger in GitOps repo
+      default: promote_release
+
   stages:
-    - steps:
-        - run:
-            script: echo "hello world"
+    - stage:
+        name: Release Promotion Trigger
+        identifier: release_promotion_trigger
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Trigger Promote Workflow
+                  identifier: trigger_promote_workflow
+                  spec:
+                    shell: Bash
+                    envVariables:
+                      VERSION: <+pipeline.variables.VERSION>
+                      ENVIRONMENT: <+pipeline.variables.ENVIRONMENT>
+                      GITOPS_REPO_URL: <+pipeline.variables.GITOPS_REPO_URL>
+                      GITOPS_API_TOKEN: <+secrets.getValue("gitops_api_token")>
+                      TRIGGER_TYPE: <+pipeline.variables.TRIGGER_TYPE>
+                      PROMOTION_WORKFLOW_ID: <+pipeline.variables.PROMOTION_WORKFLOW_ID>
+                    command: |
+                      # Make script executable
+                      chmod +x scripts/trigger_promote_workflow.sh
+
+                      # Execute promotion trigger
+                      bash scripts/trigger_promote_workflow.sh
